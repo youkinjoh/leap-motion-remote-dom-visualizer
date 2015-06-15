@@ -1,0 +1,290 @@
+<html>
+  <head>
+    <title>DOM Visualizer - Leap</title>
+    <script src="//js.leapmotion.com/0.2.0/leap.min.js"></script>
+    <script>
+
+      function moveFinger(Finger, posX, posY, posZ, dirX, dirY, dirZ) {
+        Finger.style.webkitTransform = "translateZ("+posZ+"px) translateX("+posX+"px) translateY("+posY+"px) rotateZ("+dirZ+"deg) rotateX("+dirX+"deg) rotateY("+dirY+"deg)";
+      }
+
+      function moveSphere(Sphere, posX, posY, posZ, rotX, rotY, rotZ) {
+        Sphere.style.webkitTransform = "translateZ("+posZ+"px) translateX("+posX+"px) translateY("+posY+"px) rotateZ("+rotZ+"deg) rotateX("+rotX+"deg) rotateY("+rotY+"deg)";
+      }
+
+      var connectionIds = {};
+
+      function connect(options) {
+
+        var connectionId;
+        while(true) {
+          connectionId = Math.floor(Math.random()*0xffffffff).toString(16);
+          if (connectionId in connectionIds) {
+          } else {
+            connectionIds[connectionId] = true;
+            break;
+          }
+        }
+
+        var fingers = {};
+        var spheres = {};
+
+        var degree = (!!options && "rotation" in options) ? options.rotation : 0;
+        var radian = (2 * Math.PI) * (degree / 360);
+
+        var loopController = new Leap.Controller(options || {});
+        loopController.loop(function(frame) {
+          var fingerIds = {};
+          var handIds = {};
+          if (frame.hands === undefined ) {
+            var handsLength = 0
+          } else {
+            var handsLength = frame.hands.length;
+          }
+
+          for (var handId = 0, handCount = handsLength; handId != handCount; handId++) {
+            var hand = frame.hands[handId];
+            var posX = (hand.palmPosition[0]*3);
+            var posY = (hand.palmPosition[2]*3);
+            var posZ = (hand.palmPosition[1]*3);
+            var rotX = -(hand.direction[1]*90);
+            var rotY = -(hand.palmNormal[0]*90);
+            var rotZ = (hand.direction[0]*90);
+            var posXX = Math.cos(radian) * posX + Math.sin(-radian) * posY;
+            var posYY = Math.sin(radian) * posX + Math.cos(-radian) * posY - 200;
+            var posZZ = posZ - 400;
+            var rotXX = rotX;
+            var rotYY = rotY;
+            var rotZZ = rotZ + degree;
+            var sphere = spheres[connectionId+"_"+hand.id];
+            if (!sphere) {
+              var sphereDiv = document.getElementById("sphere").cloneNode(true);
+                  sphereDiv.setAttribute('id',connectionId+"_"+hand.id);
+                  sphereDiv.style.backgroundColor='#'+Math.floor(Math.random()*16777215).toString(16);
+                  document.getElementById('scene').appendChild(sphereDiv);
+                  spheres[connectionId+"_"+hand.id] = connectionId+"_"+hand.id;
+            } else {
+              var sphereDiv =  document.getElementById(connectionId+"_"+hand.id);
+              if (typeof(sphereDiv) != 'undefined' && sphereDiv != null) {
+                moveSphere(sphereDiv, posXX, posYY, posZZ, rotXX, rotYY, rotZZ);
+              }
+            }
+            handIds[connectionId+"_"+hand.id] = true;
+          }
+          for (handId in spheres) {
+            if (!handIds[handId]) {
+              var sphereDiv =  document.getElementById(spheres[handId]);
+              sphereDiv.parentNode.removeChild(sphereDiv);
+              delete spheres[handId];
+            }
+          }
+
+          for (var pointableId = 0, pointableCount = frame.pointables.length; pointableId != pointableCount; pointableId++) {
+            var pointable = frame.pointables[pointableId];
+            var posX = (pointable.tipPosition[0]*3);
+            var posY = (pointable.tipPosition[2]*3);
+            var posZ = (pointable.tipPosition[1]*3);
+            var dirX = -(pointable.direction[1]*90);
+            var dirY = 0;
+            var dirZ = (pointable.direction[0]*90);
+            var posXX = Math.cos(radian) * posX + Math.sin(-radian) * posY;
+            var posYY = (Math.sin(radian) * posX + Math.cos(-radian) * posY) - 200;
+            var posZZ = posZ - 400;
+            var dirXX = dirX;
+            var dirYY = dirY;
+            var dirZZ = dirZ + degree;
+            var finger = fingers[connectionId+"_"+pointable.id];
+            if (!finger) {
+              var fingerDiv = document.getElementById("finger").cloneNode(true);
+                  fingerDiv.setAttribute('id',connectionId+"_"+pointable.id);
+                  fingerDiv.style.backgroundColor='#'+Math.floor(Math.random()*16777215).toString(16);
+                  document.getElementById('scene').appendChild(fingerDiv);
+                  fingers[connectionId+"_"+pointable.id] = connectionId+"_"+pointable.id;
+            } else {
+              var fingerDiv =  document.getElementById(connectionId+"_"+pointable.id);
+              if (typeof(fingerDiv) != 'undefined' && fingerDiv != null) {
+                moveFinger(fingerDiv, posXX, posYY, posZZ, dirXX, dirYY, dirZZ);
+              }
+            }
+            fingerIds[connectionId+"_"+pointable.id] = true;
+          }
+          for (fingerId in fingers) {
+            if (!fingerIds[fingerId]) {
+              var fingerDiv =  document.getElementById(fingers[fingerId]);
+              fingerDiv.parentNode.removeChild(fingerDiv);
+              delete fingers[fingerId];
+            }
+          }
+        });
+
+      }
+
+      function initialize() {
+        document.getElementById("connect").addEventListener("click", function() {
+          var host     = document.getElementById("leaphost").value;
+          var port     = document.getElementById("leapport").value;
+          var rotation = document.getElementById("rotation").value;
+          var options = {};
+          if (host) {
+            options.host = host;
+          }
+          if (port) {
+            options.port = port;
+          }
+          if (rotation) {
+            options.rotation = parseInt(rotation, 10);
+          }
+          connect(options);
+        }, false);
+        document.getElementById("connect-default").addEventListener("click", function() {
+          connect();
+        }, false);
+      }
+
+      window.addEventListener("load", initialize, false)
+
+    </script>
+    <style>
+      html,body,#app *,#app *:before,#app *:after {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        -webkit-box-sizing: border-box;
+      }
+      #nav {
+        position: absolute;
+        z-index: 2;
+      }
+      #nav input {
+        width: 160px;
+        display: block;
+      }
+      #app {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        font-size: 200%;
+        overflow: hidden;
+        background-color: #101010;
+        -webkit-perspective: 1000;
+      }
+      #scene,
+      #scene:before {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 40em;
+        height: 40em;
+        margin: -20em 0 0 -20em;
+        border: 4px solid #A0A0A0;
+        background-color: rgba(255,255,255,.1);
+        background-image:
+        -webkit-linear-gradient(rgba(255,255,255,.4) .1em, transparent .1em),
+        -webkit-linear-gradient(0deg, rgba(255,255,255,.4) .1em, transparent .1em),
+        -webkit-linear-gradient(rgba(255,255,255,.3) .05em, transparent .05em),
+        -webkit-linear-gradient(0deg, rgba(255,255,255,.3) .05em, transparent .05em);
+        background-size: 5em 5em, 5em 5em, 1em 1em, 1em 1em;
+        background-position: -.1em -.1em, -.1em -.1em, -.05em -.05em, -.05em -.05em;
+        -webkit-transform-style: preserve-3d;
+        -webkit-transform: rotateX(75deg);
+      }
+      #scene {
+        -webkit-transform: rotateX(75deg);
+      }
+      #scene:before {
+        content: '';
+        -webkit-transform: rotateX(90deg) translateZ(19.5em) translateY(20em);
+      }
+      .cube {
+        background-color: red;
+        -webkit-transform-style: preserve-3d;
+        -webkit-transform: translateX(19.5em) translateY(19.5em) translateZ(0em);
+      }
+      .finger,
+      .sphere {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 1em;
+        height: 1em;
+        margin: -.5em 0 0 -.5em;
+        -webkit-transform-style: preserve-3d;
+        -webkit-transform: translateX(14.5em) translateY(14.5em) translateZ(0);
+      }
+
+      .finger {
+        opacity: .8;
+        height: 3em;
+      }
+
+      .sphere {
+        opacity: .3;
+        height: 5em;
+        width: 5em;
+        margin-left:-2em;
+      }
+
+      .face {
+        position: absolute;
+        width: 1em;
+        height: 1em;
+        background-color: inherit;
+        -webkit-transform-style: preserve-3d;
+        -webkit-transform-origin: 0 0;
+        -webkit-box-shadow: inset 0 0 0 1px rgba(255,255,255,.9);
+      }
+      .cube .face.tp { -webkit-transform: translateZ(1em); }
+      .cube .face.ft { -webkit-transform: rotateX(90deg) translateZ(-1em); }
+      .cube .face.bk { -webkit-transform: rotateX(90deg); }
+      .cube .face.lt { -webkit-transform: rotateY(90deg) translateX(-1em); }
+      .cube .face.rt { -webkit-transform: rotateY(90deg) translateX(-1em) translateZ(1em); }
+
+      .finger .face.tp { -webkit-transform: translateZ(1em); height: 3em; }
+      .finger .face.ft { -webkit-transform: rotateX(90deg) translateZ(-3em); }
+      .finger .face.bk { -webkit-transform: rotateX(90deg); }
+      .finger .face.lt { -webkit-transform: rotateY(90deg) translateX(-1em); height: 3em;}
+      .finger .face.rt { -webkit-transform: rotateY(90deg) translateX(-1em) translateZ(1em); height: 3em;}
+
+      .sphere .face.tp { -webkit-transform: translateZ(1em); height: 5em; width: 5em;}
+      .sphere .face.ft { -webkit-transform: rotateX(90deg) translateZ(-5em); width: 5em;}
+      .sphere .face.bk { -webkit-transform: rotateX(90deg); width: 5em; }
+      .sphere .face.lt { -webkit-transform: rotateY(90deg) translateX(-1em); height: 5em;}
+      .sphere .face.rt { -webkit-transform: rotateY(90deg) translateX(-1em) translateZ(5em); height: 5em;}
+
+    </style>
+  </head>
+  <body>
+    <div id="nav">
+      <input type="text" id="leaphost" placeholder="host (default:127.0.0.1)" />
+      <input type="text" id="leapport" placeholder="port (default:6437)" />
+      <input type="text" id="rotation" placeholder="degree(0-360) (default:0)" />
+      <input type="button" id="connect" value="connect" />
+      <input type="button" id="connect-default" value="connect default" />
+    </div>
+    <div id="app">
+      <div id="scene">
+        <div id="cube" class="cube">
+          <div class="face tp"></div>
+          <div class="face lt"></div>
+          <div class="face rt"></div>
+          <div class="face ft"></div>
+          <div class="face bk"></div>
+        </div>
+        <div id="finger" class="cube finger">
+          <div class="face tp"></div>
+          <div class="face lt"></div>
+          <div class="face rt"></div>
+          <div class="face ft"></div>
+          <div class="face bk"></div>
+        </div>
+        <div id="sphere" class="cube sphere">
+          <div class="face tp"></div>
+          <div class="face lt"></div>
+          <div class="face rt"></div>
+          <div class="face ft"></div>
+          <div class="face bk"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
