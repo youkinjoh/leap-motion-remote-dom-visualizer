@@ -239,7 +239,7 @@
       }
 
       function initialize() {
-        document.getElementById("connect-default").addEventListener("click", function() {
+        document.getElementById("connect").addEventListener("click", function() {
           connect();
         }, false);
       }
@@ -358,11 +358,7 @@
   </head>
   <body>
     <div id="nav">
-      <input type="text" id="leaphost" placeholder="host (default:127.0.0.1)" />
-      <input type="text" id="leapport" placeholder="port (default:6437)" />
-      <input type="text" id="rotation" placeholder="degree(0-360) (default:0)" />
       <input type="button" id="connect" value="connect" />
-      <input type="button" id="connect-default" value="connect default" />
     </div>
     <div id="app">
       <div id="scene">
