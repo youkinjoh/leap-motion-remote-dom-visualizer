@@ -58,6 +58,17 @@
         }
       });
 
+      var send = (function() {
+        var dtm = new Date().getTime();
+        return function(message) {
+          var now = new Date().getTime();
+          if (dtm + 30 < now) {
+            ws.send(message);
+            dtm = now;
+          }
+        }
+      })();
+
       function createRenderer() {
 
         var fingers = {};
@@ -222,7 +233,7 @@
             data: frame
           });
 
-          ws.send(JSON.stringify(frame));
+          send(JSON.stringify(frame));
 
         });
       }
