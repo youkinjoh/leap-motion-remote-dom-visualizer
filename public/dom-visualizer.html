@@ -120,6 +120,7 @@
             handIds[connectionId+"_"+hand.id] = true;
           }
           for (handId in spheres) {
+            if (handId.split('_')[0] !== connectionId) {continue;}
             if (!handIds[handId]) {
               var sphereDiv =  document.getElementById(spheres[handId]);
               sphereDiv.parentNode.removeChild(sphereDiv);
@@ -157,6 +158,7 @@
             fingerIds[connectionId+"_"+pointable.id] = true;
           }
           for (fingerId in fingers) {
+            if (fingerId.split('_')[0] !== connectionId) {continue;}
             if (!fingerIds[fingerId]) {
               var fingerDiv =  document.getElementById(fingers[fingerId]);
               fingerDiv.parentNode.removeChild(fingerDiv);
