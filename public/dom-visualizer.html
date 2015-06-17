@@ -1,7 +1,7 @@
 <html>
   <head>
     <title>DOM Visualizer - Leap</title>
-    <script src="//js.leapmotion.com/0.2.0/leap.min.js"></script>
+    <script src="//js.leapmotion.com/leap-0.6.3.js"></script>
     <script>
 
       function moveFinger(Finger, posX, posY, posZ, dirX, dirY, dirZ) {
@@ -12,28 +12,65 @@
         Sphere.style.webkitTransform = "translateZ("+posZ+"px) translateX("+posX+"px) translateY("+posY+"px) rotateZ("+rotZ+"deg) rotateX("+rotX+"deg) rotateY("+rotY+"deg)";
       }
 
-      var connectionIds = {};
+      var ws = (function() {
+        var protocol = (location.protocol == "https:") ? "wss" : "ws";
+        var url = protocol + "://" + location.host + "/";
+        return new WebSocket(url);
+      })();
 
-      function connect(options) {
+      var connectionLocalId = null;
+      var connectionIds = [];
+      var renderer = createRenderer();
 
-        var connectionId;
-        while(true) {
-          connectionId = Math.floor(Math.random()*0xffffffff).toString(16);
-          if (connectionId in connectionIds) {
-          } else {
-            connectionIds[connectionId] = true;
-            break;
-          }
+      function sortConnectionIds() {
+        connectionIds.sort(function(a, b) {
+          return parseInt(a, 16) - parseInt(b, 16);
+        });
+        var pos = connectionIds.indexOf(connectionLocalId);
+        connectionIds = [].concat(
+          connectionIds.slice(pos),
+          connectionIds.slice(0, pos)
+        );
+      }
+
+      ws.addEventListener('open', function(e) {
+      });
+
+      ws.addEventListener('message', function(e) {
+        var data = JSON.parse(e.data);
+        switch(data.messageType) {
+        case 'connect':
+          connectionLocalId = data.connectionId;
+          connectionIds = [].concat([connectionLocalId], data.remoteIds);
+          sortConnectionIds();
+          break;
+        case 'connect_remote':
+          connectionIds.push(data.connectionId);
+          sortConnectionIds();
+          break;
+        case 'disconnect_remote':
+          connectionIds = connectionIds
+            .filter(function(connectionId) {return connectionId !== data.connectionId});
+          break;
+        case 'message':
+          renderer(data);
+          break;
         }
+      });
+
+      function createRenderer() {
 
         var fingers = {};
         var spheres = {};
 
-        var degree = (!!options && "rotation" in options) ? options.rotation : 0;
-        var radian = (2 * Math.PI) * (degree / 360);
+        var renderer = function(data) {
 
-        var loopController = new Leap.Controller(options || {});
-        loopController.loop(function(frame) {
+          var connectionId = data.connectionId;
+          var frame = data.data;
+
+          var degree = connectionIds.indexOf(connectionId) / connectionIds.length * 360;
+          var radian = (2 * Math.PI) * (degree / 360);
+
           var fingerIds = {};
           var handIds = {};
           if (frame.hands === undefined ) {
@@ -115,27 +152,56 @@
               delete fingers[fingerId];
             }
           }
-        });
+        };
+
+        return renderer;
 
       }
 
+      function connect() {
+        var loopController = new Leap.Controller();
+        loopController.loop(function(frame) {
+
+          var keys = Object.keys(frame);
+          keys.forEach(function(key) {
+            if (['hands', 'pointables'].indexOf(key) === -1) {
+              delete frame[key];
+            }
+          });
+
+          if (frame.hands !== undefined) {
+            frame.hands.forEach(function(hand) {
+              var keys = Object.keys(hand);
+              keys.forEach(function(key) {
+                if (['palmPosition', 'direction', 'palmNormal', 'id'].indexOf(key) === -1) {
+                  delete hand[key];
+                }
+              });
+            });
+          }
+
+          if (frame.pointables !== undefined) {
+            frame.pointables.forEach(function(pointable) {
+              var keys = Object.keys(pointable);
+              keys.forEach(function(key) {
+                if (['tipPosition', 'direction', 'id'].indexOf(key) === -1) {
+                  delete pointable[key];
+                }
+              });
+            });
+          }
+
+          renderer({
+            connectionId: connectionLocalId,
+            data: frame
+          });
+
+          ws.send(JSON.stringify(frame));
+
+        });
+      }
+
       function initialize() {
-        document.getElementById("connect").addEventListener("click", function() {
-          var host     = document.getElementById("leaphost").value;
-          var port     = document.getElementById("leapport").value;
-          var rotation = document.getElementById("rotation").value;
-          var options = {};
-          if (host) {
-            options.host = host;
-          }
-          if (port) {
-            options.port = port;
-          }
-          if (rotation) {
-            options.rotation = parseInt(rotation, 10);
-          }
-          connect(options);
-        }, false);
         document.getElementById("connect-default").addEventListener("click", function() {
           connect();
         }, false);
