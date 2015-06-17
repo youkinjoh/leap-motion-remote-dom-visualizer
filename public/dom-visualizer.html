@@ -121,11 +121,10 @@
           }
           for (handId in spheres) {
             if (handId.split('_')[0] !== connectionId) {continue;}
-            if (!handIds[handId]) {
-              var sphereDiv =  document.getElementById(spheres[handId]);
-              sphereDiv.parentNode.removeChild(sphereDiv);
-              delete spheres[handId];
-            }
+            if (handIds[handId]) {continue;}
+            var sphereDiv =  document.getElementById(spheres[handId]);
+            sphereDiv.parentNode.removeChild(sphereDiv);
+            delete spheres[handId];
           }
 
           for (var pointableId = 0, pointableCount = frame.pointables.length; pointableId != pointableCount; pointableId++) {
@@ -159,11 +158,10 @@
           }
           for (fingerId in fingers) {
             if (fingerId.split('_')[0] !== connectionId) {continue;}
-            if (!fingerIds[fingerId]) {
-              var fingerDiv =  document.getElementById(fingers[fingerId]);
-              fingerDiv.parentNode.removeChild(fingerDiv);
-              delete fingers[fingerId];
-            }
+            if (fingerIds[fingerId]) {continue;}
+            var fingerDiv =  document.getElementById(fingers[fingerId]);
+            fingerDiv.parentNode.removeChild(fingerDiv);
+            delete fingers[fingerId];
           }
         };
 
