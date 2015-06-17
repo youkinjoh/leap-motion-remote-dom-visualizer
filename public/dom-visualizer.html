@@ -161,7 +161,7 @@
       function connect() {
         var loopController = new Leap.Controller();
         loopController.loop(function(frame) {
-
+/*
           var keys = Object.keys(frame);
           keys.forEach(function(key) {
             if (['hands', 'pointables'].indexOf(key) === -1) {
@@ -188,6 +188,32 @@
                   delete pointable[key];
                 }
               });
+            });
+          }
+*/
+          var frame_ = {};
+          ['hands', 'pointables'].forEach(function(key) {
+            frame_[key] = frame[key];
+          });
+          frame = frame_
+
+          if (frame.hands !== undefined) {
+            frame.hands = frame.hands.map(function(hand) {
+              var hand_ = {};
+              ['palmPosition', 'direction', 'palmNormal', 'id'].forEach(function(key) {
+                hand_[key] = hand[key];
+              });
+              return hand_;
+            });
+          }
+
+          if (frame.pointables !== undefined) {
+            frame.pointables = frame.pointables.map(function(pointable) {
+              var pointable_ = {};
+              ['tipPosition', 'direction', 'id'].forEach(function(key) {
+                pointable_[key] = pointable[key];
+              });
+              return pointable_;
             });
           }
 
